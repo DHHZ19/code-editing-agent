@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>String Pointer Visualizer</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: system-ui, sans-serif;
+      color: #172033;
+      background: #f4f6fa;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+    }
+
+    main {
+      width: min(92vw, 620px);
+      padding: 24px;
+      border: 1px solid #dce2ed;
+      border-radius: 16px;
+      background: white;
+      box-shadow: 0 12px 36px #17203312;
+    }
+
+    h1 {
+      margin: 0 0 16px;
+      font-size: 1.25rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: #657089;
+      font-size: 0.85rem;
+    }
+
+    input {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #cfd6e4;
+      border-radius: 8px;
+      font: 1rem ui-monospace, monospace;
+    }
+
+    .line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      overflow-x: visible;
+      padding: 20px 2px 4px;
+    }
+
+    .character {
+      flex: 0 0 42px;
+      display: grid;
+      grid-template-rows: 48px 18px 16px;
+      text-align: center;
+      font-family: ui-monospace, monospace;
+    }
+
+    .value {
+      display: grid;
+      place-items: center;
+      border: 1px solid #dce2ed;
+      border-radius: 8px;
+      background: #f8f9fc;
+      font-size: 1.1rem;
+    }
+
+    .index {
+      padding-top: 4px;
+      color: #98a1b3;
+      font-size: 0.72rem;
+    }
+
+    .markers {
+      display: flex;
+      justify-content: center;
+      gap: 3px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .marker-i { color: #2563eb; }
+    .marker-j { color: #db2777; }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    button {
+      padding: 8px 12px;
+      border: 1px solid #dce2ed;
+      border-radius: 8px;
+      background: white;
+      color: #172033;
+      cursor: pointer;
+    }
+
+    button:hover { background: #f4f6fa; }
+
+    button.active {
+      border-color: #4568ef;
+      background: #edf1ff;
+      color: #2848c7;
+    }
+
+    output {
+      display: block;
+      margin-top: 14px;
+      color: #657089;
+      font: 0.9rem ui-monospace, monospace;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>String pointers</h1>
+    <label for="string-input">String</label>
+    <input id="string-input" value="5#hello" autocomplete="off">
+
+    <div class="line" id="line" aria-label="String characters and pointer positions"></div>
+
+    <div class="controls">
+      <span>Move:</span>
+      <button type="button" id="select-i" class="active">i</button>
+      <button type="button" id="select-j">j</button>
+      <button type="button" id="previous" aria-label="Move pointer left">←</button>
+      <button type="button" id="next" aria-label="Move pointer right">→</button>
+    </div>
+    <output id="status" aria-live="polite"></output>
+  </main>
+
+  <script>
+    const input = document.querySelector("#string-input");
+    const line = document.querySelector("#line");
+    const status = document.querySelector("#status");
+    const selectI = document.querySelector("#select-i");
+    const selectJ = document.querySelector("#select-j");
+    const pointers = { i: 0, j: 0 };
+    let activePointer = "i";
+
+    function render() {
+      const characters = Array.from(input.value);
+      line.replaceChildren();
+
+      characters.forEach((character, index) => {
+        const column = document.createElement("div");
+        column.className = "character";
+
+        const value = document.createElement("div");
+        value.className = "value";
+        value.textContent = character;
+
+        const markers = document.createElement("div");
+        markers.className = "markers";
+        for (const pointer of ["i", "j"]) {
+          if (pointers[pointer] === index) {
+            const marker = document.createElement("span");
+            marker.className = `marker-${pointer}`;
+            marker.textContent = pointer;
+            markers.append(marker);
+          }
+        }
+
+        const indexLabel = document.createElement("div");
+        indexLabel.className = "index";
+        indexLabel.textContent = index;
+
+        column.append(value, markers, indexLabel);
+        column.addEventListener("click", () => {
+          pointers[activePointer] = index;
+          render();
+        });
+        line.append(column);
+      });
+
+      const iChar = characters[pointers.i] ?? "—";
+      const jChar = characters[pointers.j] ?? "—";
+      status.textContent = `i = ${pointers.i} (${JSON.stringify(iChar)}),  j = ${pointers.j} (${JSON.stringify(jChar)})`;
+    }
+
+    function setActivePointer(pointer) {
+      activePointer = pointer;
+      selectI.classList.toggle("active", pointer === "i");
+      selectJ.classList.toggle("active", pointer === "j");
+    }
+
+    input.addEventListener("input", () => {
+      const lastIndex = Math.max(0, Array.from(input.value).length - 1);
+      pointers.i = Math.min(pointers.i, lastIndex);
+      pointers.j = Math.min(pointers.j, lastIndex);
+      render();
+    });
+    selectI.addEventListener("click", () => setActivePointer("i"));
+    selectJ.addEventListener("click", () => setActivePointer("j"));
+    document.querySelector("#previous").addEventListener("click", () => {
+      pointers[activePointer] = Math.max(0, pointers[activePointer] - 1);
+      render();
+    });
+    document.querySelector("#next").addEventListener("click", () => {
+      const lastIndex = Math.max(0, Array.from(input.value).length - 1);
+      pointers[activePointer] = Math.min(lastIndex, pointers[activePointer] + 1);
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>

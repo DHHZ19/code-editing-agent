@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OAuth + OIDC — quick reference</title>
+  <link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body><main>
+  <p class="eyebrow">Quick reference · OAuth + OIDC</p>
+  <h1>Who proves what?</h1>
+  <p class="dek">Keep the protocol, tokens, and local app session distinct.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Thing</th><th>What it means</th><th>Trust / use</th></tr></thead>
+    <tbody>
+      <tr><td><strong>OAuth 2.0</strong></td><td>Delegated authorization: a client gets scoped access to a resource.</td><td>Not, by itself, a login or identity protocol.</td></tr>
+      <tr><td><strong>OpenID Connect (OIDC)</strong></td><td>An identity layer on OAuth 2.0. The <code>openid</code> scope requests authentication.</td><td>Defines the ID token and identity claims.</td></tr>
+      <tr><td><strong>Authorization code</strong></td><td>Short-lived, one-time credential delivered to the registered redirect URI.</td><td>Exchange at the token endpoint; it is not an access token.</td></tr>
+      <tr><td><strong>ID token</strong></td><td>Signed JWT assertion from the issuer about an authentication event and subject.</td><td>Validate signature, issuer, audience, expiry, and nonce if sent. Intended for the OIDC client.</td></tr>
+      <tr><td><strong>Access token</strong></td><td>Credential for calling a protected resource with granted authority.</td><td>Send to the intended API, not as proof of the user's identity to your app.</td></tr>
+      <tr><td><strong>Refresh token</strong></td><td>Credential used at the authorization server to obtain new tokens.</td><td>Highly sensitive; protect and rotate/revoke according to provider behavior.</td></tr>
+      <tr><td><strong>App session cookie</strong></td><td>Your app's own browser credential, usually created after validating the OIDC response.</td><td>Controls the user's session with your app; distinct from Google's tokens.</td></tr>
+    </tbody>
+  </table></div>
+  <section class="card callout"><strong>Remember:</strong> Google authenticates the person; OIDC conveys a verifiable identity assertion to the client; your app validates it and decides whether to establish its own session.</section>
+  <h2>Authorization-code flow in one line</h2>
+  <p>Browser → Google authorization endpoint → browser returns with code → client exchanges code (+ PKCE verifier) at token endpoint → client validates ID token → app creates local session.</p>
+  <p><strong>Correlation / defenses:</strong> <code>state</code> binds the callback to the initiating browser request; PKCE binds the code exchange to the client instance that began it; <code>nonce</code> binds the ID token to the authentication request when used.</p>
+  <p><a href="../lessons/0001-google-sign-in-under-the-hood.html">Return to lesson 1: Google sign-in under the hood</a></p>
+</main></body></html>
