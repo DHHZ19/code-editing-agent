@@ -27,7 +27,7 @@ func main() {
 		return scanner.Text(), true
 	}
 
-	tools := []ToolDefinition{ReadFileDefinition, ListFilesDefinition}
+	tools := []ToolDefinition{ReadFileDefinition, ListFilesDefinition, EditFileDefinition}
 	agent := NewAgent(&client, getUserMessage, tools)
 	err := agent.Run(context.TODO())
 	if err != nil {
@@ -255,6 +255,68 @@ func ListFiles(input json.RawMessage) (string, error) {
 
 	}
 
-	fmt.Println(s.String())
 	return s.String(), err
+}
+
+type EditFileInput struct {
+	Path   string `json:"path,omitempty" jsonschema_description:"Relative path to edit file from."`
+	File   string `json:"file,omitempty" jsonschema_description:"Name of file to edit"`
+	String string `json:"string,omitempty" jsonschema_description:"The string to write"`
+}
+
+var EditFileInputSchema = openai.FunctionParameters{
+	"type": "object",
+	"properties": map[string]any{
+		"path": map[string]any{
+			"type":        "string",
+			"description": "A relative path to the file",
+		},
+		"file": map[string]any{
+			"type":        "string",
+			"description": "The name of the file",
+		},
+		"string": map[string]any{
+			"type":        "string",
+			"description": "the string to write",
+		},
+	},
+}
+
+var EditFileDefinition = ToolDefinition{
+	Name:        "edit_files",
+	Description: "Edit files, edit files by replacing or adding text at the provided path",
+	InputSchema: EditFileInputSchema,
+	Function:    EditFile,
+}
+
+func EditFile(input json.RawMessage) (string, error) {
+	editFileInput := &EditFileInput{}
+	json.Unmarshal(input, editFileInput)
+
+	base, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	var rel string
+	if editFileInput.Path != "." && editFileInput.Path != "" {
+		rel, err = filepath.Rel(base, editFileInput.Path)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		rel = ""
+	}
+
+	var s strings.Builder
+	s.WriteString(rel)
+	s.WriteString(editFileInput.File)
+	toWrite := []byte(editFileInput.String)
+
+	err = os.WriteFile(s.String(), toWrite, 0666)
+	if err != nil {
+		return "", err
+	}
+
+	return "", nil
 }
