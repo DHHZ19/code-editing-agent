@@ -85,7 +85,6 @@ func (a *Agent) Run(ctx context.Context) error {
 					for _, content := range item.Content {
 						if content.Type == "output_text" {
 							outputText.WriteString(content.AsOutputText().Text)
-							fmt.Println(content.AsOutputText().Text)
 						}
 					}
 				case "function_call":
@@ -259,9 +258,9 @@ func ListFiles(input json.RawMessage) (string, error) {
 }
 
 type EditFileInput struct {
-	Path   string `json:"path,omitempty" jsonschema_description:"Relative path to edit file from."`
-	File   string `json:"file,omitempty" jsonschema_description:"Name of file to edit"`
-	String string `json:"string,omitempty" jsonschema_description:"The string to write"`
+	Path    string `json:"path,omitempty" jsonschema_description:"Relative path to edit file from."`
+	Replace string `json:"replace,omitempty" jsonschema_description:"The string to replace"`
+	String  string `json:"string,omitempty" jsonschema_description:"The string to write"`
 }
 
 var EditFileInputSchema = openai.FunctionParameters{
@@ -271,9 +270,9 @@ var EditFileInputSchema = openai.FunctionParameters{
 			"type":        "string",
 			"description": "A relative path to the file",
 		},
-		"file": map[string]any{
+		"replace": map[string]any{
 			"type":        "string",
-			"description": "The name of the file",
+			"description": "the string to replace",
 		},
 		"string": map[string]any{
 			"type":        "string",
@@ -293,27 +292,18 @@ func EditFile(input json.RawMessage) (string, error) {
 	editFileInput := &EditFileInput{}
 	json.Unmarshal(input, editFileInput)
 
-	base, err := os.Getwd()
+	content, err := os.ReadFile(editFileInput.Path)
 	if err != nil {
+		if os.IsNotExist(err) && editFileInput.Replace != "" {
+			return "file does not exist", nil
+		}
 		return "", err
 	}
 
-	var rel string
-	if editFileInput.Path != "." && editFileInput.Path != "" {
-		rel, err = filepath.Rel(base, editFileInput.Path)
-		if err != nil {
-			return "", err
-		}
-	} else {
-		rel = ""
-	}
+	c := string(content)
+	c = strings.ReplaceAll(c, editFileInput.Replace, editFileInput.String)
 
-	var s strings.Builder
-	s.WriteString(rel)
-	s.WriteString(editFileInput.File)
-	toWrite := []byte(editFileInput.String)
-
-	err = os.WriteFile(s.String(), toWrite, 0666)
+	err = os.WriteFile(editFileInput.Path, []byte(c), 0666)
 	if err != nil {
 		return "", err
 	}
